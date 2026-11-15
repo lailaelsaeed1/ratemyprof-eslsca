@@ -153,6 +153,9 @@ export const api = {
   async listReviews(professorId) {
     return db(`/rest/v1/review_feed?select=*&professor_id=eq.${enc(professorId)}&order=created_at.desc`);
   },
+  async listCourses() {
+    return db("/rest/v1/course_catalog?select=*&order=uses.desc&limit=500");
+  },
   async myReviews() {
     return db("/rest/v1/my_reviews?select=*&order=created_at.desc");
   },
@@ -162,6 +165,7 @@ export const api = {
   async upsertReview(r) {
     return rpc("upsert_review", {
       p_professor_id: r.professor_id,
+      p_course_name: r.course_name,
       p_course_code: r.course_code,
       p_semester: r.semester,
       p_overall: r.overall,

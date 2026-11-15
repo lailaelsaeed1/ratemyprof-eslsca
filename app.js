@@ -87,6 +87,8 @@ function semesters() {
 }
 const GRADES = ["A+", "A", "A-", "B+", "B", "B-", "C+", "C", "C-", "D+", "D", "F", "Pass", "Withdrawn", "In progress"];
 const REASONS = { abusive: "Abusive or a personal attack", spam: "Spam or off-topic", fake: "Not a real professor", duplicate: "Duplicate profile", other: "Something else" };
+const courseKey = (name, code) => (name || "").trim() ? name.trim().replace(/\s+/g, " ").toLowerCase() : (code || "").toLowerCase();
+const courseLabel = (r) => r.course_name || r.course_code || "";
 const norm = (s) => s.toLowerCase().replace(/^((prof|professor|dr|doctor|eng|mr|mrs|ms|د|دكتور|دكتورة)\.?\s+)+/u, "").replace(/[\s\p{P}]+/gu, "");
 
 async function busy(btn, fn) {
@@ -243,10 +245,10 @@ async function viewHome() {
   $app.innerHTML = `
     <section class="hero">
       <h1>Grade your professors.</h1>
-      <p>Anonymous reviews from ESLSCA students, so you know what a course is really like before you register.</p>
+      <p>Anonymous reviews from ESLSCA students, so you know what a course is really like before you register. Search by professor, course name or course code.</p>
     </section>
     <div class="search" role="search">
-      <input type="search" id="q" placeholder="Name or course code, like BUS101" aria-label="Search professors" />
+      <input type="search" id="q" placeholder="Professor or course, like Accounting" aria-label="Search professors" />
       <select id="dept" aria-label="Department"><option value="">All departments</option>${depts.map((d) => `<option>${esc(d)}</option>`).join("")}</select>
       <select id="sort" aria-label="Sort by">
         <option value="reviews">Most reviewed</option><option value="best">Highest grade</option>
@@ -261,7 +263,8 @@ async function viewHome() {
     let rows = profs.filter((p) =>
       (!dept.value || p.department === dept.value) &&
       (!term || norm(p.name).includes(termN) || p.name.toLowerCase().includes(term) ||
-        (p.courses || []).some((c) => c.toLowerCase().includes(term.replace(/[\s-]/g, "")))));
+        (p.courses || []).some((c) => c.toLowerCase().includes(term.replace(/[\s-]/g, ""))) ||
+        (p.course_names || []).some((c) => c.toLowerCase().includes(term))));
     const s = sort.value;
     rows.sort((a, b) =>
       s === "best" ? (b.avg_overall ?? -1) - (a.avg_overall ?? -1) || b.review_count - a.review_count
@@ -286,6 +289,13 @@ async function viewHome() {
   q.focus();
 }
 
+function courseChips(p) {
+  const list = (p.course_names || []).length ? p.course_names : p.courses || [];
+  if (!list.length) return "";
+  const more = list.length > 4 ? `<span class="chip">+${list.length - 4} more</span>` : "";
+  return `<span class="chips">${list.slice(0, 4).map((c) => `<span class="chip">${esc(c)}</span>`).join("")}${more}</span>`;
+}
+
 function profLine(p) {
   return `<a class="line prof-line" href="#/p/${esc(p.id)}">
     <span class="gut">${mark(p.avg_overall, { seed: p.id, emptyText: "New" })}</span>
@@ -293,7 +303,7 @@ function profLine(p) {
       <span>
         <span class="name" dir="auto">${esc(p.name)}</span><br>
         <span class="dept">${esc(p.department)}</span>
-        ${(p.courses || []).length ? `<span class="chips">${p.courses.slice(0, 5).map((c) => `<span class="chip">${esc(c)}</span>`).join("")}</span>` : ""}
+        ${courseChips(p)}
       </span>
       <span class="figures">
         ${p.review_count ? `<b>${p.review_count}</b> ${p.review_count === 1 ? "review" : "reviews"}<br>` : "No reviews yet<br>"}
@@ -359,6 +369,11 @@ async function viewProfessor(id) {
     $app.innerHTML = `<div class="sheet empty form-sheet"><h2>Professor not found</h2><p class="muted">This profile may have been removed after reports.</p><a class="btn btn-primary" href="#/">Go to all professors</a></div>`;
     return;
   }
+  const courseFilter = new Map();
+  for (const r of reviews) {
+    const k = r.course_key || courseKey(r.course_name, r.course_code);
+    if (!courseFilter.has(k) || r.course_name) courseFilter.set(k, courseLabel(r));
+  }
   const meter = (label, v, lo = "", hi = "") =>
     `<div class="meter"><div class="label"><span>${label}</span><b>${fmt(v)}</b></div>
       <div class="track"><div class="fill" style="width:${v == null ? 0 : (v / 5) * 100}%"></div></div>
@@ -389,12 +404,12 @@ async function viewProfessor(id) {
       </div>
     </section>
     <div class="section-head"><h2>What students say</h2></div>
-    ${p.courses?.length > 1 ? `<div class="filters" id="course-filter"><button class="chip on" data-c="">All courses</button>${p.courses.map((c) => `<button class="chip" data-c="${esc(c)}">${esc(c)}</button>`).join("")}</div>` : ""}
+    ${courseFilter.size > 1 ? `<div class="filters" id="course-filter"><button class="chip on" data-c="">All courses</button>${[...courseFilter].map(([k, label]) => `<button class="chip" data-c="${esc(k)}">${esc(label)}</button>`).join("")}</div>` : ""}
     <div id="reviews"></div>`;
 
   const box = $app.querySelector("#reviews");
   const draw = (course = "") => {
-    const rows = reviews.filter((r) => !course || r.course_code === course);
+    const rows = reviews.filter((r) => !course || (r.course_key || courseKey(r.course_name, r.course_code)) === course);
     box.innerHTML = rows.length
       ? `<div class="sheet ruled">${rows.map(reviewLine).join("")}</div>`
       : `<div class="sheet empty"><h2>No reviews yet</h2><p class="muted">Took a course with them? Your review helps the next student.</p><a class="btn btn-primary" href="#/p/${esc(p.id)}/rate">Write the first review</a></div>`;
@@ -411,9 +426,9 @@ async function viewProfessor(id) {
     const b = e.target.closest("button[data-act]");
     if (!b) return;
     const r = reviews.find((x) => x.id === b.dataset.id);
-    if (b.dataset.act === "edit") location.hash = `#/p/${p.id}/rate?course=${encodeURIComponent(r.course_code)}`;
+    if (b.dataset.act === "edit") location.hash = `#/p/${p.id}/rate?course=${encodeURIComponent(r.course_key || courseKey(r.course_name, r.course_code))}`;
     if (b.dataset.act === "delete") {
-      modal(`<h2>Delete your review?</h2><p class="muted" style="margin-bottom:20px">Your ${esc(r.course_code)} review will be removed for good.</p>
+      modal(`<h2>Delete your review?</h2><p class="muted" style="margin-bottom:20px">Your ${esc(courseLabel(r))} review will be removed for good.</p>
         <div class="actions"><button class="btn btn-danger" id="yes">Delete review</button><button class="btn btn-ghost" id="no">Keep it</button></div>`,
         (m, close) => {
           m.querySelector("#no").onclick = close;
@@ -436,7 +451,7 @@ function reviewLine(r) {
         : r.reported_by_me ? `<span class="small muted">You reported this</span>`
         : `<button class="btn-text" data-act="report" data-id="${esc(r.id)}">Report</button>`}</div></div>
       <div class="meta">
-        <span><b>${esc(r.course_code)}</b></span><span>${esc(r.semester)}</span>
+        <span><b>${esc(courseLabel(r))}</b></span>${r.course_name && r.course_code ? `<span>${esc(r.course_code)}</span>` : ""}<span>${esc(r.semester)}</span>
         ${r.grade ? `<span>Got <b>${esc(r.grade)}</b></span>` : ""}
         <span>${dateStr(r.created_at)}${edited ? ", edited" : ""}</span>
       </div>
@@ -478,10 +493,13 @@ function reportModal(target, what) {
 
 async function viewRate(id) {
   const course = new URLSearchParams(location.hash.split("?")[1] || "").get("course") || "";
-  const [p, reviews] = await Promise.all([api.getProfessor(id), api.listReviews(id)]);
+  const [p, reviews, catalog] = await Promise.all([api.getProfessor(id), api.listReviews(id), api.listCourses().catch(() => [])]);
   if (!p) { $app.innerHTML = `<div class="sheet empty form-sheet"><h2>Professor not found</h2><a class="btn btn-primary" href="#/">Go to all professors</a></div>`; return; }
   const mine = reviews.filter((r) => r.is_mine);
-  let existing = mine.find((r) => r.course_code === course.toUpperCase()) || null;
+  const keyOf = (r) => r.course_key || courseKey(r.course_name, r.course_code);
+  let existing = mine.find((r) => keyOf(r) === course.toLowerCase()) || null;
+  // This professor's courses first, then everything else students have entered.
+  const names = [...new Set([...(p.course_names || []), ...catalog.map((c) => c.course_name)])];
   const scoreRow = (key, label, sub) => `
     <div class="score-row"><div class="what">${label}<small>${sub}</small></div>
       <div class="picks" data-key="${key}" role="radiogroup" aria-label="${label}">
@@ -494,9 +512,14 @@ async function viewRate(id) {
       <div id="edit-note"></div>
       <form id="f">
         <div class="two">
-          <div class="field"><label for="course">Course code</label>
-            <input id="course" type="text" required maxlength="15" placeholder="BUS101" value="${esc(existing?.course_code || course)}" list="course-list" autocomplete="off" />
+          <div class="field"><label for="cname">Course name</label>
+            <input id="cname" type="text" required minlength="2" maxlength="80" dir="auto" placeholder="Contemporary Management" value="${esc(existing?.course_name || "")}" list="cname-list" autocomplete="off" />
+            <datalist id="cname-list">${names.map((c) => `<option value="${esc(c)}">`).join("")}</datalist></div>
+          <div class="field"><label for="course">Course code <span class="hint">optional</span></label>
+            <input id="course" type="text" maxlength="15" placeholder="BUS101" value="${esc(existing?.course_code || "")}" list="course-list" autocomplete="off" />
             <datalist id="course-list">${(p.courses || []).map((c) => `<option value="${esc(c)}">`).join("")}</datalist></div>
+        </div>
+        <div class="two">
           <div class="field"><label for="semester">Semester</label>
             <select id="semester" required><option value="">Choose a semester</option>${semesters().map((s) => `<option ${existing?.semester === s ? "selected" : ""}>${s}</option>`).join("")}</select></div>
         </div>
@@ -537,7 +560,7 @@ async function viewRate(id) {
   const count = () => ($app.querySelector("#count").textContent = f.comment.value.length);
   const setMode = (r) => {
     existing = r;
-    $app.querySelector("#edit-note").innerHTML = r ? `<p class="note" style="margin-bottom:20px">You already reviewed ${esc(r.course_code)}, so you're editing that review.</p>` : "";
+    $app.querySelector("#edit-note").innerHTML = r ? `<p class="note" style="margin-bottom:20px">You already reviewed ${esc(courseLabel(r))}, so you're editing that review.</p>` : "";
     $app.querySelector("#submit").textContent = r ? "Save changes" : "Post review";
   };
   const fillFrom = (r) => {
@@ -560,12 +583,20 @@ async function viewRate(id) {
     if (b) { vals.would_take_again = b.dataset.v === "true"; paintAgain(); }
   });
   f.comment.oninput = count;
-  f.course.addEventListener("change", () => {
+  const checkExisting = () => {
     const code = f.course.value.toUpperCase().replace(/[\s\-_./]+/g, "");
-    const match = mine.find((r) => r.course_code === code);
+    const key = courseKey(f.cname.value, code);
+    const match = mine.find((r) => keyOf(r) === key) || (code && mine.find((r) => !r.course_name && r.course_code === code));
     if (match && match !== existing) fillFrom(match);
     else if (!match && existing) setMode(null);
+  };
+  f.cname.addEventListener("change", () => {
+    // Picked a known course: fill in its code if the student left it empty.
+    const known = catalog.find((c) => c.course_name.toLowerCase() === f.cname.value.trim().toLowerCase());
+    if (known?.course_code && !f.course.value.trim()) f.course.value = known.course_code;
+    checkExisting();
   });
+  f.course.addEventListener("change", checkExisting);
   fillFrom(existing);
 
   f.onsubmit = async (e) => {
@@ -578,7 +609,7 @@ async function viewRate(id) {
     await busy($app.querySelector("#submit"), async () => {
       try {
         await api.upsertReview({
-          professor_id: p.id, course_code: f.course.value, semester: f.semester.value,
+          professor_id: p.id, course_name: f.cname.value, course_code: f.course.value, semester: f.semester.value,
           overall: vals.overall, clarity: vals.clarity, fairness: vals.fairness, workload: vals.workload,
           helpfulness: vals.helpfulness, would_take_again: vals.would_take_again, grade: f.grade.value, comment: f.comment.value,
         });
@@ -605,10 +636,10 @@ async function viewMe() {
         <div class="gut">${mark(r.overall, { size: "sm", seed: r.id })}</div>
         <div class="body">
           <a href="#/p/${esc(r.professor_id)}" dir="auto"><b>${esc(r.professor_name)}</b></a>
-          <div class="meta"><span><b>${esc(r.course_code)}</b></span><span>${esc(r.semester)}</span></div>
+          <div class="meta"><span><b>${esc(courseLabel(r))}</b></span>${r.course_name && r.course_code ? `<span>${esc(r.course_code)}</span>` : ""}<span>${esc(r.semester)}</span></div>
           ${r.hidden ? `<p class="hidden-flag">Hidden after reports from other students</p>` : ""}
           <p class="comment" dir="auto">${esc(r.comment)}</p>
-          <a class="small" href="#/p/${esc(r.professor_id)}/rate?course=${encodeURIComponent(r.course_code)}">Edit this review</a>
+          <a class="small" href="#/p/${esc(r.professor_id)}/rate?course=${encodeURIComponent(courseKey(r.course_name, r.course_code))}">Edit this review</a>
         </div></article>`).join("")}</div>`
       : `<div class="sheet empty"><p class="muted">You haven't reviewed anyone yet.</p><a class="btn btn-primary" href="#/">Find a professor</a></div>`}`;
   $app.querySelector("#out").onclick = async () => {
