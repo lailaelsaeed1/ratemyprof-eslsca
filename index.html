@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>RateMyProf ESLSCA</title>
+  <meta name="description" content="Anonymous professor ratings by ESLSCA students. Independent student project." />
+  <meta name="robots" content="noindex" />
+  <meta name="theme-color" content="#fafbfd" />
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'><path d='M10 34C8 16 30 6 46 10s14 24 4 34-34 12-40-2' fill='none' stroke='%23d7263d' stroke-width='5' stroke-linecap='round'/><text x='17' y='42' font-family='Arial' font-weight='bold' font-size='24' fill='%23d7263d'>A+</text></svg>" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <!-- Fonts load in the background: if Google Fonts is slow or blocked, the site still starts with fallback fonts. -->
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400..800&family=IBM+Plex+Sans+Arabic:wght@400;600&family=Kalam:wght@700&display=swap" media="print" onload="this.media='all'" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <a class="skip" href="#app">Skip to content</a>
+  <header class="topbar">
+    <div class="topbar-inner">
+      <a href="#/" class="brand" aria-label="Home">
+        <span class="brand-mark" aria-hidden="true">
+          <svg viewBox="0 0 64 48"><path d="M8 26C6 11 26 3 42 5s18 17 12 28S20 49 10 36" /></svg>
+          <span>A+</span>
+        </span>
+        <span id="brand-name">RateMyProf ESLSCA</span>
+      </a>
+      <nav id="nav" aria-label="Main"></nav>
+    </div>
+  </header>
+  <div id="demo-banner" class="demo-banner" hidden></div>
+  <main id="app" class="wrap" tabindex="-1"><p class="muted">Loading…</p></main>
+  <footer class="footer wrap">
+    <p>Independent student project, not affiliated with or endorsed by ESLSCA University.
+      Reviews are students' personal opinions, posted under random aliases.</p>
+    <p><a href="#/guidelines">Community guidelines</a></p>
+  </footer>
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+  <div id="modal-root"></div>
+  <script>
+    // If the site can't start, show the reason on the page instead of "Loading…" forever.
+    (function () {
+      function show(msg) {
+        if (window.__appStarted) return;
+        var el = document.getElementById("app");
+        if (!el || el.dataset.fatal) return;
+        el.dataset.fatal = "1";
+        el.innerHTML = '<div class="sheet sheet-pad form-sheet"><h2>The site couldn\u2019t start</h2>' +
+          '<p class="error" style="margin-top:14px"></p>' +
+          '<p class="muted small">Most often this is a typo in config.js: check the quote marks (plain " not curly \u201c \u201d) and the comma at the end of each line.</p></div>';
+        el.querySelector(".error").textContent = msg;
+      }
+      window.__showFatal = show;
+      window.addEventListener("error", function (e) {
+        var where = e.filename ? " (in " + e.filename.split("/").pop() + ", line " + e.lineno + ")" : "";
+        show((e.message || "Unknown error") + where);
+      });
+      window.addEventListener("unhandledrejection", function (e) {
+        show(String((e.reason && e.reason.message) || e.reason));
+      });
+      setTimeout(function () {
+        show("The site took more than 20 seconds to start. Check your internet connection and reload. If it keeps happening, config.js probably has a typo.");
+      }, 20000);
+    })();
+  </script>
+  <script type="module" src="app.js"></script>
+</body>
+</html>
