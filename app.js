@@ -532,7 +532,7 @@ async function viewRate(id) {
           ${scoreRow("workload", "Workload", "1 is light, 5 is heavy")}
         </div>
         <div class="two">
-          <div class="field"><span class="label">Would you take them again?</span>
+          <div class="field"><span class="label">Would you take a course with them again?</span>
             <div class="seg" id="again"><button type="button" data-v="true">Yes</button><button type="button" data-v="false">No</button></div></div>
           <div class="field"><label for="grade">Your grade <span class="hint">optional</span></label>
             <select id="grade"><option value="">Prefer not to say</option>${GRADES.map((g) => `<option ${existing?.grade === g ? "selected" : ""}>${g}</option>`).join("")}</select></div>
@@ -605,7 +605,7 @@ async function viewRate(id) {
     err.innerHTML = "";
     const missing = ["overall", "clarity", "fairness", "helpfulness", "workload"].filter((k) => !vals[k]);
     if (missing.length) return showError(err, "Give a grade from 1 to 5 in every row.");
-    if (vals.would_take_again == null) return showError(err, "Choose whether you'd take this professor again.");
+    if (vals.would_take_again == null) return showError(err, "Choose whether you'd take a course with them again.");
     await busy($app.querySelector("#submit"), async () => {
       try {
         await api.upsertReview({
