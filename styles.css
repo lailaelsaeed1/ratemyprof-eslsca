@@ -195,14 +195,29 @@ button.chip.on { background: var(--graphite); border-color: var(--graphite); col
 .modal-bg { position: fixed; inset: 0; background: rgba(20, 24, 50, .42); display: grid; place-items: center; padding: 20px; z-index: 50; }
 .modal { max-width: 460px; width: 100%; padding: 26px 28px; }
 .modal h2 { margin-bottom: 10px; }
-.toast { position: fixed; bottom: 24px; left: 50%; transform: translate(-50%, 140%); background: var(--graphite); color: #fff; padding: 12px 18px; border-radius: 9px; font-size: .94rem; font-weight: 600; transition: transform .25s ease; z-index: 60; max-width: calc(100vw - 32px); }
-.toast.show { transform: translate(-50%, 0); }
+.toast { position: fixed; bottom: 24px; left: 50%; transform: translate(-50%, 16px); opacity: 0; visibility: hidden; pointer-events: none; background: var(--graphite); color: #fff; padding: 12px 18px; border-radius: 9px; font-size: .94rem; font-weight: 600; transition: transform .25s ease, opacity .25s ease, visibility .25s; z-index: 60; max-width: calc(100vw - 32px); }
+.toast.show { transform: translate(-50%, 0); opacity: 1; visibility: visible; }
 @media (prefers-reduced-motion: reduce) { .toast { transition: none; } }
 .footer { border-top: 1px solid var(--rule); padding-top: 20px; padding-bottom: 44px; font-size: .86rem; color: var(--pencil); }
 .footer p + p { margin-top: 6px; }
 .guide { padding-left: 20px; }
 .guide li { margin-bottom: 10px; }
 .guide li::marker { color: var(--pen); }
+
+/* ---------- buy me a coffee ---------- */
+.footer-links { display: flex; gap: 18px; flex-wrap: wrap; align-items: center; }
+.coffee-link { font: inherit; background: none; border: 0; padding: 0; color: var(--ink); text-decoration: underline; text-underline-offset: 3px; cursor: pointer; }
+.modal.coffee { position: relative; padding: 30px 30px 22px; }
+.modal-x { position: absolute; top: 10px; right: 10px; width: 34px; height: 34px; border: 0; background: none; font-size: 1.6rem; line-height: 1; color: var(--pencil); cursor: pointer; border-radius: 8px; }
+.modal-x:hover { background: var(--ink-soft); color: var(--ink); }
+.coffee-mark { position: relative; display: grid; place-items: center; width: 86px; height: 64px; margin-bottom: 14px; transform: rotate(-4deg); }
+.coffee-mark svg { position: absolute; inset: 0; width: 100%; height: 100%; fill: none; stroke: var(--pen); stroke-width: 2.6; stroke-linecap: round; stroke-linejoin: round; overflow: visible; }
+.coffee-mark svg.cup { position: static; width: 32px; height: 32px; stroke-width: 1.8; }
+.coffee-title { font-size: 1.9rem; font-weight: 800; letter-spacing: -.03em; margin-bottom: 10px !important; }
+.handle { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: 12px; padding: 9px 10px 9px 14px; border: 1.5px dashed var(--rule); border-radius: 9px; }
+.handle b { overflow-wrap: anywhere; }
+.handle .copy { border: 1.5px solid var(--rule); color: var(--ink); background: #fff; padding: 6px 12px; }
+.coffee-foot { display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; margin-top: 18px; }
 
 /* ---------- small screens ---------- */
 @media (max-width: 720px) {
