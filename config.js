@@ -17,6 +17,13 @@ export const CONFIG = {
   // (table allowed_email_domains), so keep the two in sync.
   ALLOWED_DOMAINS: ["eslsca.edu.eg"],
 
+  // "Buy me a coffee" pop-up. Leave INSTAPAY_LINK empty to turn it off.
+  INSTAPAY_LINK: "https://ipn.eg/S/lailaelsaeed/instapay/6krG3F",
+  INSTAPAY_HANDLE: "lailaelsaeed@instapay",
+  // The pop-up opens on a professor's page (including right after posting a review),
+  // at most once every this many days per person. The footer link always works.
+  COFFEE_EVERY_DAYS: 7,
+
   DEPARTMENTS: [
     "Business Administration",
     "Computing and Digital Technology",

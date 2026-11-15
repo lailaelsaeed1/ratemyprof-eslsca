@@ -116,6 +116,56 @@ function modal(html, onMount) {
   return close;
 }
 
+// ---------------------------------------------------------------- buy me a coffee
+const COFFEE_KEY = "rmp-coffee-seen";
+function coffeeModal() {
+  if (!CONFIG.INSTAPAY_LINK) return;
+  try { localStorage.setItem(COFFEE_KEY, String(Date.now())); } catch {}
+  modal(`
+    <button class="modal-x" type="button" aria-label="Close">&times;</button>
+    <span class="coffee-mark" aria-hidden="true">
+      <svg viewBox="0 0 64 48"><path d="${LOOPS[0]}"/></svg>
+      <svg class="cup" viewBox="0 0 24 24"><path d="M3 14c.83 .642 2.077 1.017 3.5 1c1.423 .017 2.67 -.358 3.5 -1c.83 -.642 2.077 -1.017 3.5 -1c1.423 -.017 2.67 .358 3.5 1"/><path d="M8 3a2.4 2.4 0 0 0 -1 2a2.4 2.4 0 0 0 1 2"/><path d="M12 3a2.4 2.4 0 0 0 -1 2a2.4 2.4 0 0 0 1 2"/><path d="M3 10h14v5a6 6 0 0 1 -6 6h-2a6 6 0 0 1 -6 -6v-5z"/><path d="M16.746 16.726a3 3 0 1 0 .252 -5.555"/></svg>
+    </span>
+    <h2 class="coffee-title">Buy me a coffee</h2>
+    <p class="muted" style="margin-bottom:22px">RateMyProf is free, has no ads, and is run by one ESLSCA student. If you find this helpful, a small tip keeps the database and emails running.</p>
+    <a class="btn btn-primary" style="width:100%" href="${esc(CONFIG.INSTAPAY_LINK)}" target="_blank" rel="noopener">Send with InstaPay</a>
+    ${CONFIG.INSTAPAY_HANDLE ? `<div class="handle">
+      <div><span class="small muted">Or send to</span><br><b>${esc(CONFIG.INSTAPAY_HANDLE)}</b></div>
+      <button class="btn-text copy" type="button">Copy</button></div>` : ""}
+    <div class="coffee-foot"><span class="small muted">Payments go through InstaPay. Any amount helps.</span>
+      <button class="btn-text later" type="button">Maybe later</button></div>`,
+    (m, close) => {
+      m.classList.add("coffee");
+      m.querySelector(".modal-x").onclick = close;
+      m.querySelector(".later").onclick = close;
+      const copy = m.querySelector(".copy");
+      if (copy) copy.onclick = async () => {
+        try { await navigator.clipboard.writeText(CONFIG.INSTAPAY_HANDLE); copy.textContent = "Copied"; }
+        catch { copy.textContent = "Copy failed"; }
+        setTimeout(() => (copy.textContent = "Copy"), 1600);
+      };
+    });
+}
+// Shown on a professor's page, at most once every COFFEE_EVERY_DAYS days.
+function maybeCoffee() {
+  if (!CONFIG.INSTAPAY_LINK) return;
+  let last = 0;
+  try { last = Number(localStorage.getItem(COFFEE_KEY)) || 0; } catch {}
+  const days = Number(CONFIG.COFFEE_EVERY_DAYS ?? 7);
+  if (Date.now() - last < days * 864e5) return;
+  const here = location.hash;
+  // Give them a moment to see the page first, and skip it if they've already moved on.
+  setTimeout(() => {
+    if (location.hash === here && !document.querySelector("#modal-root .modal")) coffeeModal();
+  }, 1200);
+}
+if (CONFIG.INSTAPAY_LINK) {
+  const link = document.getElementById("coffee-link");
+  link.hidden = false;
+  link.onclick = coffeeModal;
+}
+
 // ---------------------------------------------------------------- nav + router
 function renderNav() {
   if (!session) {
@@ -438,6 +488,7 @@ async function viewProfessor(id) {
     if (b.dataset.act === "report") reportModal({ reviewId: r.id }, "review");
   });
   $app.querySelector("#report-prof").onclick = () => reportModal({ professorId: p.id }, "profile");
+  maybeCoffee();
 }
 
 function reviewLine(r) {
